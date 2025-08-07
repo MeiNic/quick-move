@@ -5,6 +5,7 @@
   "version": "1.107.0",
   "default_locale": "en",
   "author": "The Betterbird Project, original author: Philipp Kewisch",
+  "homepage_url": "https://www.betterbird.eu/addons/",
   "browser_specific_settings": {
     "gecko": {
       "id": "qfm-classic@betterbird.eu",
