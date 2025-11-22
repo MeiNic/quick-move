@@ -220,7 +220,14 @@ var quickmove = (function() {
         doc = document;
       } else {
         let tabmail = window.top.document.getElementById("tabmail");
-        doc = tabmail?.currentAbout3Pane?.document;
+        if (tabmail) {
+          doc = tabmail.currentAbout3Pane?.document;
+        } else {
+          // No support for stand-alone windows since rendering the menu there results in
+          // TypeError: el.render is not a function - chrome://global/content/elements/menu.js:165
+          // which is Mozilla platform code.
+          doc = document;
+        }
       }
       for (let folder of folders) {
         let node = doc.createXULElement("menuitem");

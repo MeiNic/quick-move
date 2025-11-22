@@ -29,6 +29,8 @@ function initCSS(window, document) {
 }
 
 function initKeys(window, document) {
+  // This is necessary so the keys work, however, the menu entries don't appear to be
+  // visible on any menu.
   document.getElementById("mainPopupSet").appendChild(
     window.MozXULElement.parseXULToFragment(`
       <menupopup id="quickmove-move-menupopup"
@@ -89,6 +91,8 @@ function initKeys(window, document) {
 }
 
 function initContextMenus(window, document, standAlone) {
+  // Patch the context menu on the main 3pane window.
+  // Note that the context menu for any message opened in a tab is not affected!
   let doc = standAlone
     ? document.getElementById("messageBrowser").contentDocument
     : document.getElementById("tabmail")?.currentAbout3Pane?.document;
@@ -150,6 +154,7 @@ function initContextMenus(window, document, standAlone) {
 }
 
 function initFolderLocation(window, document) {
+  // Patch the "Folder Location" widget on the unified toolbar. We only add "GoTo".
   let quickmoveLocationPopup = window.MozXULElement.parseXULToFragment(`
     <menupopup id="toolbarFolderLocationPopup"
                ignorekeys="true"
@@ -199,7 +204,10 @@ this.quickmove = class extends ExtensionAPI {
 
     ExtensionSupport.registerWindowListener("quickmove", {
       chromeURLs: [
-        "chrome://messenger/content/messageWindow.xhtml",
+        // No support for stand-alone windows since rendering the menu there results in
+        // TypeError: el.render is not a function - chrome://global/content/elements/menu.js:165
+        // which is Mozilla platform code.
+        // "chrome://messenger/content/messageWindow.xhtml",
         "chrome://messenger/content/messenger.xhtml",
       ],
       onLoadWindow: async function(window) {
