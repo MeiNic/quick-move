@@ -105,6 +105,41 @@ var quickmove = (function() {
       };
       // End MIT license code
     },
+
+    createXULElement: function(doc, tagName) {
+      // createXULElement was removed in TB 141; fall back to the XUL namespace.
+      if (doc.createXULElement) {
+        return doc.createXULElement(tagName);
+      }
+      return doc.createElementNS(
+        "http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul",
+        tagName
+      );
+    },
+
+    /**
+     * Find the native nsIMsgFolder for a pseudo-folder built from the WX API.
+     * Matches by server display name and folder path.
+     */
+    findNativeFolder: function(pseudoFolder) {
+      try {
+        let parts = pseudoFolder.path.split("/").filter(Boolean);
+        for (let acct of MailServices.accounts.accounts) {
+          let server = acct.incomingServer;
+          if (!server) { continue; }
+          if (server.prettyName !== pseudoFolder.server?.prettyName) { continue; }
+          let f = server.rootFolder;
+          for (let part of parts) {
+            f = f.getChildNamed(part);
+            if (!f) { break; }
+          }
+          if (f) { return f; }
+        }
+      } catch (ex) {
+        console.error("QFM: findNativeFolder failed", ex);
+      }
+      return null;
+    },
   };
 
   return {
@@ -127,6 +162,12 @@ var quickmove = (function() {
     initiator: null,
 
     /**
+     * Selected message headers (nsIMsgDBHdr[]), captured synchronously in
+     * popupshowing from gDBView before the popup can steal focus.
+     */
+    pendingMessages: [],
+
+    /**
      * Event listener method to be called when the 'move to' or 'copy to'
      * context menu is shown.
      */
@@ -141,6 +182,17 @@ var quickmove = (function() {
       if (focusedElement && focusedElement.id) {
         quickmove.initiator = document.commandDispatcher.focusedElement;
       }
+
+      // Grab selected message headers right now, synchronously, while we still
+      // have a valid window context. The popup will steal focus immediately after.
+      try {
+        let tabmail = document.getElementById("tabmail");
+        let gDBView = tabmail?.currentAbout3Pane?.gDBView;
+        quickmove.pendingMessages = gDBView?.getSelectedMsgHdrs() || [];
+      } catch (ex) {
+        quickmove.pendingMessages = [];
+      }
+
       Quickmove.clearItems(event.target);
       quickmove.prepareFolders().then(() => {
         let initialText = "";
@@ -189,7 +241,7 @@ var quickmove = (function() {
       // First create a map of pretty names to find possible duplicates.
       for (let folder of folders) {
         let lowerName = folder.prettyName.toLowerCase();
-        let serverLowerName = folder.server.prettyName.toLowerCase();
+        let serverLowerName = (folder.server?.prettyName || "").toLowerCase();
 
         if (!(lowerName in serverMap)) {
           serverMap[lowerName] = {};
@@ -230,7 +282,7 @@ var quickmove = (function() {
         }
       }
       for (let folder of folders) {
-        let node = doc.createXULElement("menuitem");
+        let node = Quickmove.createXULElement(doc, "menuitem");
         if (doNotCrop) {
           node.setAttribute("crop", "none");
         }
@@ -242,7 +294,7 @@ var quickmove = (function() {
         }
 
         if ((lowerLabel in dupeMap && dupeMap[lowerLabel] > 1) || alwaysShowMailbox) {
-          label += " - " + folder.server.prettyName;
+          label += " - " + (folder.server?.prettyName || "");
         }
         node.setAttribute("label", label);
         node._folder = folder;
@@ -263,78 +315,66 @@ var quickmove = (function() {
      * Prepare the recent folders and the suffix tree with all available folders.
      */
     prepareFolders: async function() {
-      function sorter(a, b) {
-        let atime = Number(a.getStringProperty("MRUTime")) || 0;
-        let btime = Number(b.getStringProperty("MRUTime")) || 0;
-        return atime < btime;
-      }
-
-      /**
-       * This function will iterate through any existing sub-folders and
-       * (1) check if they're recent and (2) recursively call this function
-       * to iterate through any sub-sub-folders.
-       *
-       * @param aFolder  the folder to check
-       * @param excludeArchives  if Archives folder must be excluded
-       */
-      function processFolder(aFolder, excludeArchives) {
-        if (excludeArchives && aFolder.isSpecialFolder(Ci.nsMsgFolderFlags.Archive, false)) {
-          return;
-        }
-        addIfRecent(aFolder);
-        allFolders.push(aFolder);
-        allNames.push(aFolder.prettyName.toLowerCase());
-
-        if (aFolder.hasSubFolders) {
-          for (let xFolder of aFolder.subFolders) {
-            processFolder(xFolder, excludeArchives);
-          }
-        }
-      }
-
-      function addIfRecent(aFolder) {
-        if (!aFolder.canFileMessages) {
-          return;
-        }
-
-        let time = 0;
-        try {
-          time = Number(aFolder.getStringProperty("MRUTime")) || 0;
-        } catch (ex) {
-          // If MRUTime is NaN, assume 0
-        }
-
-        if (time <= oldestTime) {
-          return;
-        }
-
-        if (recentFolders.length == maxRecent) {
-          recentFolders.sort(sorter);
-          recentFolders.pop();
-          oldestTime =
-            Number(recentFolders[recentFolders.length - 1].getStringProperty("MRUTime")) || 0;
-        }
-        recentFolders.push(aFolder);
-      }
+      let maxRecent = await Quickmove.getPref("maxRecentFolders", 15);
+      let excludeArchives = await Quickmove.getPref("excludeArchives", false);
 
       let allFolders = [];
       let allNames = [];
       let recentFolders = (quickmove.recentFolders = []);
-      let oldestTime = 0;
 
-      let maxRecent = await Quickmove.getPref("maxRecentFolders", 15);
-      let excludeArchives = await Quickmove.getPref("excludeArchives", false);
+      try {
+        let foldersApi = await Quickmove.getWXAPI("folders");
+        let accountsApi = await Quickmove.getWXAPI("accounts");
 
-      for (let acct of MailServices.accounts.accounts) {
-        if (acct.incomingServer) {
-          processFolder(acct.incomingServer.rootFolder, excludeArchives);
+        // Build account id → display name map.
+        let accountList = await accountsApi.list();
+        let accountMap = new Map();
+        for (let acct of (accountList || [])) {
+          accountMap.set(acct.id, acct.name || acct.label || acct.type || "");
         }
+
+        // Fetch all folders that can receive messages.
+        let apiFolders = await foldersApi.query({ canAddMessages: true });
+        let folderById = new Map();
+        for (let f of (apiFolders || [])) {
+          if (!f.name) { continue; }
+          if (excludeArchives && Array.isArray(f.specialUse) && f.specialUse.includes("archives")) { continue; }
+          let pseudoFolder = {
+            prettyName: f.name,
+            path: f.path,
+            canFileMessages: true,
+            server: { prettyName: accountMap.get(f.accountId) || "" },
+            _folderId: f.id,
+          };
+          allFolders.push(pseudoFolder);
+          allNames.push(f.name.toLowerCase());
+          if (f.id) { folderById.set(f.id, pseudoFolder); }
+        }
+
+        // Fetch recent folders sorted by last-used-as-destination.
+        let recentApiFolders = await foldersApi.query({
+          canAddMessages: true,
+          sort: "lastUsedAsDestination",
+          limit: maxRecent,
+        });
+        for (let f of (recentApiFolders || [])) {
+          if (!f.name) { continue; }
+          if (excludeArchives && Array.isArray(f.specialUse) && f.specialUse.includes("archives")) { continue; }
+          recentFolders.push(folderById.get(f.id) || {
+            prettyName: f.name,
+            path: f.path,
+            canFileMessages: true,
+            server: { prettyName: accountMap.get(f.accountId) || "" },
+            _folderId: f.id,
+          });
+        }
+      } catch (ex) {
+        console.error("QFM: prepareFolders failed", ex);
       }
 
       quickmove.suffixTree = new MultiSuffixTree(allNames, allFolders);
-
-      recentFolders.sort(sorter);
     },
+
 
     /**
      * Perform a search. If no search term is entered, the recent folders are
@@ -343,7 +383,9 @@ var quickmove = (function() {
     search: function(textboxNode, useDocument) {
       let popup = textboxNode.parentNode;
       Quickmove.clearItems(popup);
-      dump(`=== text |${textboxNode.value}|\n`);
+      if (!quickmove.suffixTree) {
+        return;
+      }
       if (textboxNode.value.length) {
         let folders = quickmove.suffixTree
           .findMatches(textboxNode.value.toLowerCase())
@@ -351,7 +393,7 @@ var quickmove = (function() {
         if (folders.length) {
           quickmove.addFolders(folders, popup, textboxNode.value, useDocument);
         } else {
-          let node = document.createXULElement("menuitem");
+          let node = Quickmove.createXULElement(document, "menuitem");
           node.setAttribute("disabled", "true");
           node.style.textAlign = "center";
           node.setAttribute("label", Quickmove.getString("noResults"));
@@ -378,38 +420,30 @@ var quickmove = (function() {
       quickmove.executeMove(folder, true);
     },
 
-    executeMove: async function(folder, copyNotMove) {
-      if (copyNotMove) {
-        // MsgCopyMessage(folder); // Doesn't exist any more.
-        goDoCommand("cmd_copyMessage", folder);
-      } else {
-        if (await Quickmove.getPref("markAsRead", true)) {
-          // This doesn't work in 115 any more.
-          // MsgMarkMsgAsRead(true);
-          // This won't work in the message pane, but then the
-          // message is read anyway.
-          let tabmail = document.getElementById("tabmail");
-          if (tabmail) {
-            tabmail.currentAbout3Pane.gDBView.doCommand(Ci.nsMsgViewCommandType.markMessagesRead);
-          }
-        }
-
-        // MsgMoveMessage(folder); // Doesn't exist any more.
-        goDoCommand("cmd_moveMessage", folder);
+    executeMove: function(folder, copyNotMove) {
+      let messages = quickmove.pendingMessages;
+      if (!messages.length) {
+        console.error("QFM: executeMove - no messages selected");
+        return;
       }
+      let dstFolder = Quickmove.findNativeFolder(folder);
+      if (!dstFolder) {
+        console.error("QFM: executeMove - destination folder not found:", folder.path);
+        return;
+      }
+      let srcFolder = messages[0].folder;
+      // TB 141+: pass a plain JS array directly; nsIMutableArray no longer works.
+      MailServices.copy.copyMessages(srcFolder, messages, dstFolder, !copyNotMove, null, null, true);
     },
 
     executeGoto: function(folder) {
-      // This doesn't work in 115 any more.
-      // gFolderTreeView.selectFolder(folder, true);
-      // Apparently there is no replacement yet.
-      // So we use a trick from here:
-      // https://searchfox.org/comm-central/search?q=tab.*folder+%3D+folder&path=&case=false&regexp=true
+      let dstFolder = Quickmove.findNativeFolder(folder);
+      if (!dstFolder) {
+        console.error("QFM: executeGoto - folder not found:", folder.path);
+        return;
+      }
       let tabmail = document.getElementById("tabmail");
-      // Something like this could also work:
-      // tabmail.currentAbout3Pane.displayFolder(folder);
-      let tab = tabmail.currentTabInfo;
-      tab.folder = folder;
+      tabmail?.currentAbout3Pane?.displayFolder(dstFolder);
     },
 
     focus: function(event) {
@@ -499,7 +533,7 @@ var quickmove = (function() {
         let popup = document.getElementById(popupName);
         popup.openPopup(folderTree, "overlap");
       } else {
-        Cu.reportError("Couldn't find a node to open the panel on");
+        console.error("Couldn't find a node to open the panel on");
       }
     },
 

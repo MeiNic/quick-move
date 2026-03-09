@@ -228,24 +228,12 @@ this.quickmove = class extends ExtensionAPI {
           let count = 0;
           while (
             count++ < 50 &&
-            // .currentAbout3Pane throws if .currentTabInfo isn't available yet, so test it first.
-            !(
-              document.getElementById("tabmail")?.currentTabInfo &&
-              document
-                .getElementById("tabmail")
-                ?.currentAbout3Pane?.document.getElementById("mailContext-moveMenu") &&
-              document
-                .getElementById("tabmail")
-                ?.currentAbout3Pane?.document.getElementById("mailContext-copyMenu") &&
-              document.getElementById("toolbarFolderLocationPopup")
-            )
+            !document.getElementById("toolbarFolderLocationPopup")
           ) {
             // eslint-disable-next-line id-length
             await new Promise(r => window.setTimeout(r, 100));
           }
         }
-        initContextMenus(window, document, standAlone);
-
         if (standAlone) {
           document.getElementById("quickmove-goto").remove();
         } else {
@@ -271,7 +259,7 @@ this.quickmove = class extends ExtensionAPI {
           try {
             func();
           } catch (e) {
-            Cu.reportError(e);
+            console.error(e);
           }
         }
       }

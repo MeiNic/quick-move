@@ -11,7 +11,7 @@
       "id": "qfm-classic@betterbird.eu",
       "update_url": "https://www.betterbird.eu/downloads/Addons/updates.json",
       "strict_min_version": "128.0",
-      "strict_max_version": "140.*"
+      "strict_max_version": "150.*"
     }
   },
   "icons": {
@@ -22,7 +22,8 @@
     "browser_style": true
   },
   "permissions": [
-    "storage"
+    "storage",
+    "accountsRead"
   ],
   "experiment_apis": {
     "quickmove": {
