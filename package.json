@@ -22,7 +22,7 @@
     "lint": "commitlint -f origin/master && eslint src || true"
   },
   "devDependencies": {
-    "@commitlint/cli": "^13.1.0",
+    "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^13.1.0",
     "babel-eslint": "^10.1.0",
     "bump-file": "^2.0.0",
