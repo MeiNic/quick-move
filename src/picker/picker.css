@@ -1,0 +1,91 @@
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	font: menu;
+	background: Canvas;
+	color: CanvasText;
+}
+
+.picker {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	height: 100vh;
+	padding: 10px;
+}
+
+#folderSearch {
+	width: 100%;
+	padding: 6px 8px;
+	background: Field;
+	color: FieldText;
+	border: 1px solid GrayText;
+	border-radius: 4px;
+}
+
+#status {
+	margin: 0;
+	min-height: 1.2em;
+	color: GrayText;
+	font-size: 0.9em;
+}
+
+#folderList {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	overflow: auto;
+	border: 1px solid GrayText;
+	border-radius: 4px;
+	background: Field;
+}
+
+#folderList li + li {
+	border-top: 1px solid GrayText;
+}
+
+.folder-button {
+	width: 100%;
+	text-align: left;
+	background: Field;
+	color: FieldText;
+	border: 0;
+	padding: 8px 10px;
+	cursor: pointer;
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.folder-title {
+	font-weight: 600;
+	line-height: 1.25;
+	word-break: break-word;
+}
+
+.folder-meta {
+	font-size: 0.9em;
+	opacity: 0.85;
+	line-height: 1.2;
+}
+
+.folder-button:hover,
+.folder-button:focus,
+.folder-button.selected {
+	background: Highlight;
+	color: HighlightText;
+	outline: none;
+}
+
+.empty {
+	padding: 10px;
+	text-align: center;
+	color: GrayText;
+}
+
+:root {
+	color-scheme: light dark;
+}

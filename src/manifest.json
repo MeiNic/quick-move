@@ -2,16 +2,14 @@
   "manifest_version": 2,
   "name": "Quick Folder Move Classic",
   "description": "__MSG_extensionDescription__",
-  "version": "1.109.0",
+  "version": "1.110.0",
   "default_locale": "en",
   "author": "The Betterbird Project, original author: Philipp Kewisch",
   "homepage_url": "https://www.betterbird.eu/addons/",
   "browser_specific_settings": {
     "gecko": {
-      "id": "qfm-classic@betterbird.eu",
-      "update_url": "https://www.betterbird.eu/downloads/Addons/updates.json",
-      "strict_min_version": "128.0",
-      "strict_max_version": "150.*"
+      "id": "qfm-classic@meinic.github.io",
+      "strict_min_version": "140.0"
     }
   },
   "icons": {
@@ -21,27 +19,39 @@
     "page": "options/options.html",
     "browser_style": true
   },
+  "background": {
+    "scripts": [
+      "background.js"
+    ]
+  },
+  "commands": {
+    "open-quick-move": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+1",
+        "mac": "Command+Shift+1"
+      },
+      "description": "Quick Folder Move: Move messages"
+    },
+    "open-quick-move-secondary": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+2",
+        "mac": "Command+Shift+2"
+      },
+      "description": "Quick Folder Move: Copy messages"
+    },
+    "open-quick-move-tertiary": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+3",
+        "mac": "Command+Shift+3"
+      },
+      "description": "Quick Folder Move: Go to folder"
+    }
+  },
   "permissions": [
     "storage",
-    "accountsRead"
-  ],
-  "experiment_apis": {
-    "quickmove": {
-      "schema": "api/schema.json",
-      "parent": {
-        "scopes": [
-          "addon_parent"
-        ],
-        "script": "api/quickmove.js",
-        "events": [
-          "startup"
-        ],
-        "paths": [
-          [
-            "quickmove"
-          ]
-        ]
-      }
-    }
-  }
+    "accountsRead",
+    "messagesRead",
+    "messagesMove",
+    "tabs"
+  ]
 }

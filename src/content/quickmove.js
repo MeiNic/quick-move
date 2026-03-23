@@ -8,7 +8,7 @@
 "use strict";
 
 var quickmove = (function() {
-  const ADDON_ID = "qfm-classic@betterbird.eu";
+  const ADDON_ID = "qfm-classic@meinic.github.io";
 
   let { MultiSuffixTree } = ChromeUtils.importESModule("resource:///modules/gloda/SuffixTree.sys.mjs");
   let { ExtensionParent } = ChromeUtils.importESModule("resource://gre/modules/ExtensionParent.sys.mjs");
