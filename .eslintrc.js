@@ -13,10 +13,12 @@ module.exports = {
     "es6": true,
     "webextensions": true,
   },
-  "parser": "babel-eslint",
+  "parser": "@babel/eslint-parser",
 
   "parserOptions": {
-    "ecmaVersion": 11
+    "ecmaVersion": 2024,
+    "sourceType": "module",
+    "requireConfigFile": false
   },
 
   "globals": {

@@ -1,17 +1,17 @@
 {
-  "name": "quickmove",
-  "description": "Quick Folder Move",
+  "name": "quick-move",
+  "description": "Quick Move",
   "version": "1.10.0",
   "private": true,
-  "author": "Philipp Kewisch <mozilla@kewis.ch>",
+  "author": "MeiNic <nico.meissner2006@gmail.com>",
   "license": "MPL-2.0",
-  "homepage": "https://github.com/kewisch/quickmove#readme",
+  "homepage": "https://github.com/MeiNic/quick-move#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kewisch/quickmove.git"
+    "url": "git+ssh://git@github.com/MeiNic/quick-move.git"
   },
   "bugs": {
-    "url": "https://github.com/kewisch/quickmove/issues"
+    "url": "https://github.com/MeiNic/quick-move/issues"
   },
   "scripts": {
     "build": "rm dist/quickmove.xpi; (cd src && zip -9r ../dist/quickmove.xpi *)",
@@ -22,17 +22,16 @@
     "lint": "commitlint -f origin/master && eslint src || true"
   },
   "devDependencies": {
-    "@commitlint/cli": "^20.4.3",
-    "@commitlint/config-conventional": "^13.1.0",
-    "babel-eslint": "^10.1.0",
-    "conventional-changelog-cli": "^2.1.1",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.0.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@babel/eslint-parser": "^7.25.0",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-fetch-options": "^0.0.5",
-    "eslint-plugin-html": "^6.1.2",
-    "eslint-plugin-mozilla": "^2.10.0",
-    "eslint-plugin-no-unsanitized": "^3.1.5",
-    "eslint-plugin-prettier": "^3.4.0",
-    "prettier": "^1.19.0"
+    "eslint-plugin-html": "^8.0.0",
+    "eslint-plugin-mozilla": "^4.0.0",
+    "eslint-plugin-no-unsanitized": "^4.0.0",
+    "eslint-plugin-prettier": "^5.0.0",
+    "prettier": "^3.2.0"
   }
 }

@@ -1,4 +1,4 @@
-Quick Folder Move
+Quick Move
 =================
 
 This add-on provides fast keyboard-driven message moving for Thunderbird.

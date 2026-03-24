@@ -1,11 +1,11 @@
 {
   "manifest_version": 2,
-  "name": "Quick Folder Move Classic",
+  "name": "Quick Move",
   "description": "__MSG_extensionDescription__",
   "version": "1.110.0",
   "default_locale": "en",
-  "author": "The Betterbird Project, original author: Philipp Kewisch",
-  "homepage_url": "https://www.betterbird.eu/addons/",
+  "author": "MeiNic (fork), original author: Philipp Kewisch",
+  "homepage_url": "https://github.com/MeiNic/quick-move#readme",
   "browser_specific_settings": {
     "gecko": {
       "id": "qfm-classic@meinic.github.io",
@@ -30,21 +30,21 @@
         "default": "Ctrl+Shift+1",
         "mac": "Command+Shift+1"
       },
-      "description": "Quick Folder Move: Move messages"
+      "description": "Quick Move: Move messages"
     },
     "open-quick-move-secondary": {
       "suggested_key": {
         "default": "Ctrl+Shift+2",
         "mac": "Command+Shift+2"
       },
-      "description": "Quick Folder Move: Copy messages"
+      "description": "Quick Move: Copy messages"
     },
     "open-quick-move-tertiary": {
       "suggested_key": {
         "default": "Ctrl+Shift+3",
         "mac": "Command+Shift+3"
       },
-      "description": "Quick Folder Move: Go to folder"
+      "description": "Quick Move: Go to folder"
     }
   },
   "permissions": [
