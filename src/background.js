@@ -246,7 +246,7 @@ async function gotoFolder(folderId) {
 		return { ok: false, error: "No mail tab available" };
 	}
 
-	await browser.mailTabs.update(targetTab.id, { displayedFolder: destination });
+	await browser.mailTabs.update(targetTab.id, { displayedFolder: folderId });
 	try {
 		await browser.windows.update(targetTab.windowId, { focused: true });
 	} catch (_error) {

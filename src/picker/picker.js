@@ -4,6 +4,7 @@ let state = {
 	filteredFolders: [],
 	selectedIndex: -1,
 	action: "move",
+	isExecuting: false,
 };
 
 const folderSearch = document.getElementById("folderSearch");
@@ -25,6 +26,55 @@ function setStatus(text) {
 	statusNode.textContent = text;
 }
 
+function getPathLeaf(pathValue) {
+	let value = (pathValue || "").trim();
+	if (!value) {
+		return "";
+	}
+	let segments = value.split("/").filter(Boolean);
+	return segments[segments.length - 1] || value;
+}
+
+function getMatchScore(folder, normalizedQuery) {
+	let name = normalizeSearchText(folder.name || "");
+	let path = normalizeSearchText(folder.path || "");
+	let pathLeaf = normalizeSearchText(getPathLeaf(folder.path || folder.primaryLabel || ""));
+	let account = normalizeSearchText(folder.accountName || "");
+
+	if (pathLeaf == normalizedQuery) {
+		return 0;
+	}
+	if (name == normalizedQuery) {
+		return 1;
+	}
+	if (pathLeaf.startsWith(normalizedQuery)) {
+		return 2;
+	}
+	if (name.startsWith(normalizedQuery)) {
+		return 3;
+	}
+	if (path.startsWith(normalizedQuery)) {
+		return 4;
+	}
+	if (pathLeaf.includes(normalizedQuery)) {
+		return 5;
+	}
+	if (name.includes(normalizedQuery)) {
+		return 6;
+	}
+	if (path.includes(normalizedQuery)) {
+		return 7;
+	}
+	if (account.startsWith(normalizedQuery)) {
+		return 20;
+	}
+	if (account.includes(normalizedQuery)) {
+		return 21;
+	}
+
+	return Number.POSITIVE_INFINITY;
+}
+
 function getActionLabel() {
 	if (state.action == "copy") {
 		return "Copy";
@@ -33,6 +83,16 @@ function getActionLabel() {
 		return "Go to";
 	}
 	return "Move";
+}
+
+function isExpectedContextUnloadError(error) {
+	let message = String(error?.message || error || "").toLowerCase();
+	return (
+		message.includes("context unloaded") ||
+		message.includes("conduits") ||
+		message.includes("extension context invalidated") ||
+		message.includes("message manager disconnected")
+	);
 }
 
 function renderFolders() {
@@ -85,9 +145,29 @@ function applyFilter() {
 	if (!query) {
 		state.filteredFolders = [...state.folders];
 	} else {
-		state.filteredFolders = state.folders.filter(folder =>
-			folder.searchText.includes(normalizedQuery)
-		);
+		state.filteredFolders = state.folders
+			.map(folder => ({
+				folder,
+				score: getMatchScore(folder, normalizedQuery),
+			}))
+			.filter(candidate => Number.isFinite(candidate.score))
+			.sort((a, b) => {
+				if (a.score != b.score) {
+					return a.score - b.score;
+				}
+
+				let aLabel = a.folder.primaryLabel || a.folder.path || a.folder.name || "";
+				let bLabel = b.folder.primaryLabel || b.folder.path || b.folder.name || "";
+				let labelCmp = aLabel.localeCompare(bLabel, undefined, { sensitivity: "base" });
+				if (labelCmp != 0) {
+					return labelCmp;
+				}
+
+				let aAccount = a.folder.accountName || "";
+				let bAccount = b.folder.accountName || "";
+				return aAccount.localeCompare(bAccount, undefined, { sensitivity: "base" });
+			})
+			.map(candidate => candidate.folder);
 	}
 
 	state.selectedIndex = state.filteredFolders.length ? 0 : -1;
@@ -114,19 +194,35 @@ function updateSelectedIndex(delta) {
 }
 
 async function executeAction(folderId) {
+	if (state.isExecuting) {
+		return;
+	}
+
 	if (state.action != "goto" && !state.messageIds.length) {
 		setStatus("Select one or more messages first");
 		return;
 	}
 
+	state.isExecuting = true;
 	setStatus(`${getActionLabel()}…`);
 
-	let response = await browser.runtime.sendMessage({
-		type: "quickmove:execute",
-		action: state.action,
-		folderId,
-		messageIds: state.messageIds,
-	});
+	let response;
+	try {
+		response = await browser.runtime.sendMessage({
+			type: "quickmove:execute",
+			action: state.action,
+			folderId,
+			messageIds: state.messageIds,
+		});
+	} catch (error) {
+		if (isExpectedContextUnloadError(error)) {
+			return;
+		}
+		setStatus(String(error?.message || "Action failed"));
+		return;
+	} finally {
+		state.isExecuting = false;
+	}
 
 	if (!response?.ok) {
 		setStatus(response?.error || "Move failed");
