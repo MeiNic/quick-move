@@ -16,7 +16,7 @@
   "scripts": {
     "build": "rm dist/quickmove.xpi; (cd src && zip -9r ../dist/quickmove.xpi *)",
     "clean": "rm dist/quickmove.xpi",
-    "bump": "bumper() { bump package.json \"$1\"; bump src/manifest.json \"$1\"; }; bumper",
+    "bump": "node -e \"const fs=require('fs');const v=process.argv[1];if(!v){console.error('Usage: npm run bump -- <version>');process.exit(1);}for(const f of ['package.json','src/manifest.json']){const j=JSON.parse(fs.readFileSync(f,'utf8'));j.version=v;fs.writeFileSync(f,JSON.stringify(j,null,2)+'\\n');}\"",
     "tag": "git tag v$(jq -r '.version' src/manifest.json)",
     "lint0": ".\\node_modules\\.bin\\eslint src",
     "lint": "commitlint -f origin/master && eslint src || true"
@@ -25,7 +25,6 @@
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^13.1.0",
     "babel-eslint": "^10.1.0",
-    "bump-file": "^2.0.0",
     "conventional-changelog-cli": "^2.1.1",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.0.0",
