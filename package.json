@@ -1,7 +1,7 @@
 {
   "name": "quick-move",
   "description": "Quick Move",
-  "version": "1.10.0",
+  "version": "1.110.0",
   "private": true,
   "author": "MeiNic <nico.meissner2006@gmail.com>",
   "license": "MPL-2.0",
